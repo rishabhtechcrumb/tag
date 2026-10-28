@@ -1,358 +1,1069 @@
 
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>JSON AES-GCM Encoder / Decoder</title>
-
-  <!-- CodeMirror 5: syntax highlighting, line numbers, and JSON editing -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
-
-  <style>
-    :root {
-      color-scheme: light;
-      --bg: #f5f7fb;
-      --panel: #ffffff;
-      --text: #182230;
-      --muted: #667085;
-      --border: #d9e0ea;
-      --accent: #2563eb;
-      --accent-hover: #1d4ed8;
-      --success: #067647;
-      --error: #b42318;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 28px 16px 48px;
-      background: var(--bg); color: var(--text);
-      font: 15px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    .container { max-width: 1080px; margin: 0 auto; }
-    header { margin-bottom: 22px; }
-    h1 { margin: 0 0 6px; font-size: clamp(25px, 4vw, 34px); letter-spacing: -.03em; }
-    h2 { margin: 0 0 14px; font-size: 17px; }
-    p { margin: 0 0 12px; }
-    .sub { color: var(--muted); }
-    .panel {
-      background: var(--panel); border: 1px solid var(--border);
-      border-radius: 14px; padding: 20px; margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(16, 24, 40, .035);
-    }
-    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-    label { display: block; font-weight: 650; margin-bottom: 6px; }
-    input, textarea {
-      display: block; width: 100%; border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 12px; font: inherit; color: var(--text);
-      background: #fff;
-    }
-    input:focus, textarea:focus { outline: 2px solid #bfdbfe; border-color: var(--accent); }
-    .key-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
-    .key-row input { flex: 1; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
-    .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
-    button {
-      border: 1px solid var(--border); border-radius: 9px; padding: 9px 14px;
-      background: white; color: var(--text); font: inherit; font-weight: 650; cursor: pointer;
-    }
-    button:hover { background: #f1f5f9; }
-    button.primary { color: #fff; background: var(--accent); border-color: var(--accent); }
-    button.primary:hover { background: var(--accent-hover); }
-    button[aria-pressed="true"] { border-color: var(--accent); background: #eff6ff; color: #1d4ed8; }
-    .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-    .editor-wrap { border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
-    .CodeMirror {
-      height: 280px; font: 13px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
-    }
-    .output .CodeMirror { height: 280px; }
-    .status { padding: 11px 13px; border-radius: 9px; background: #f2f4f7; color: var(--muted); overflow-wrap: anywhere; }
-    .status.success { background: #ecfdf3; color: var(--success); }
-    .status.error { background: #fef3f2; color: var(--error); }
-    .small { font-size: 13px; color: var(--muted); }
-    .warning { border-left: 3px solid #f79009; padding-left: 12px; }
-    @media (max-width: 680px) {
-      .grid { grid-template-columns: 1fr; }
-      .panel { padding: 15px; }
-      body { padding: 18px 10px 36px; }
-      .CodeMirror { height: 240px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON Encrypt / Decrypt</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --bg: #eef2f7;
+    --card: #ffffff;
+    --border: #d5dde8;
+    --text: #0f172a;
+    --muted: #526071;
+    --accent: #1d4ed8;
+    --accent-hover: #1e40af;
+    --accent-soft: #eaf1ff;
+    --success: #166534;
+    --error: #b91c1c;
+    --input-bg: #fbfdff;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 1280px; margin: 0 auto; padding: 40px 24px 64px; }
+  header { margin-bottom: 28px; }
+  h1 { font-size: 28px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -.02em; }
+  .sub { margin: 0; color: var(--muted); font-size: 13px; font-family: var(--mono); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .05);
+  }
+  .layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 24px; align-items: start; }
+  .workspace { min-width: 0; }
+  .key-card { position: sticky; top: 24px; }
+  .key-card .grid { grid-template-columns: 1fr; }
+  .key-card .url-row { flex-direction: column; align-items: stretch; }
+  h2 { font-size: 12px; margin: 0 0 16px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+  .hint { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  .url-row { display: flex; align-items: flex-end; gap: 10px; }
+  .url-row label { flex: 1; min-width: 0; }
+  .url-row button { white-space: nowrap; flex: none; }
+  @media (max-width: 560px) { .url-row { flex-direction: column; align-items: stretch; } }
+  label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #374151; }
+  input, textarea, pre {
+    width: 100%;
+    background: var(--input-bg);
+    color: var(--text);
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  input { font-size: 14px; }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  textarea { resize: vertical; min-height: 150px; }
+  textarea::placeholder { color: #94a3b8; opacity: 1; }
+  .field-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .field-label { font-size: 13px; font-weight: 600; color: #374151; }
+  button.small { padding: 5px 12px; font-size: 12px; }
+  #plainInput { min-height: 500px; }
+  .json-editor-host {
+    height: 540px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--input-bg);
+  }
+  .json-editor-host:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  @media (max-width: 560px) {
+    .json-editor-host { height: 380px; }
+    #plainInput { min-height: 340px; }
+  }
+  .json-output-host { height: 440px; }
+  @media (max-width: 560px) { .json-output-host { height: 340px; } }
+  #configUrl { font-size: 12px; }
+  #urlStatus { display: block; min-height: 20px; margin: 8px 0 2px; }
+  #urlStatus:empty { min-height: 0; margin: 0; }
+  .derived {
+    margin-top: 18px;
+    padding: 11px 14px;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .derived code { color: var(--accent); background: var(--accent-soft); border-radius: 5px; padding: 2px 7px; font-family: var(--mono); font-weight: 600; word-break: break-all; }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    margin: 0;
+    background: #e2e8f0;
+    border-radius: 11px;
+  }
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .tabs button {
+    flex: 1;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    border-radius: 8px;
+    padding: 11px 16px;
+    font-weight: 600;
+  }
+  .tabs button:hover { color: var(--text); }
+  .tabs button.active {
+    background: var(--card);
+    color: var(--accent);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .15);
+  }
+  .panel { margin-top: 16px; }
+  .panel[hidden] { display: none; }
+  .output-field-head { margin-top: 20px; }
+  #cipherOutput, #cipherInput { font-size: 12px; }
+  #plainOutput { min-height: 440px; }
+  @media (max-width: 560px) {
+    #plainOutput { min-height: 340px; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .key-card { position: static; }
+    .key-card .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .key-card .url-row { flex-direction: row; align-items: flex-end; }
+  }
+  @media (max-width: 560px) {
+    .key-card .grid { grid-template-columns: 1fr; }
+    .key-card .url-row { flex-direction: column; align-items: stretch; }
+  }
+  .actions { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  button.action {
+    background: var(--accent);
+    color: #fff;
+    border: 1px solid var(--accent);
+    font-weight: 600;
+  }
+  button.action:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  button.secondary { background: #fff; color: #374151; border: 1px solid #cbd5e1; }
+  button.secondary:hover { background: #f8fafc; border-color: #94a3b8; color: var(--text); }
+  .status { font-size: 13px; font-weight: 500; font-family: var(--mono); }
+  .status.success { color: var(--success); }
+  .status.error { color: var(--error); }
+  button.copy { padding: 5px 12px; font-size: 12px; }
+  #banner {
+    display: none;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: var(--error);
+    font-size: 13px;
+  }
+  .decrypt-output { min-height: 150px; margin: 0; overflow: auto; white-space: pre-wrap; word-break: break-word; background: #f8fafc; }
+  .decrypt-output:empty::before { content: attr(data-placeholder); color: #94a3b8; }
+  .shortcut-hint { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+  .tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: 6px;
+    border-radius: 999px;
+    background: #d9e2ee;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    vertical-align: 1px;
+  }
+  .tabs button.active .tab-count { background: var(--accent-soft); color: var(--accent); }
+  .history-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+  .history-title { display: flex; align-items: baseline; gap: 8px; }
+  .history-hint { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+  .history-list { display: flex; flex-direction: column; gap: 10px; max-height: 520px; overflow-y: auto; padding-right: 2px; }
+  .history-empty {
+    margin: 0;
+    padding: 30px 18px;
+    text-align: center;
+    color: var(--muted);
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    background: #f8fafc;
+    font-size: 14px;
+  }
+  .history-item { border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: #fff; }
+  .history-item:hover { border-color: #b9c6d8; }
+  .history-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .history-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 9px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .history-badge.encrypt { background: var(--accent-soft); color: var(--accent); }
+  .history-badge.decrypt { background: #e8f7ee; color: var(--success); }
+  .history-time { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .history-actions { display: flex; gap: 8px; margin-left: auto; }
+  .history-meta { margin: 8px 0 0; font-size: 12px; color: var(--muted); font-family: var(--mono); word-break: break-all; }
+  .history-preview { display: grid; gap: 6px; margin-top: 10px; }
+  .history-row { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 8px; align-items: center; }
+  .history-row span { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .history-row code {
+    display: block;
+    padding: 4px 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  button.danger { background: #fff; color: var(--error); border: 1px solid #fecaca; }
+  button.danger:hover { background: #fef2f2; border-color: #fca5a5; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (max-width: 560px) {
+    .tabs button { padding: 10px 8px; font-size: 13px; }
+    .history-toolbar { flex-direction: column; }
+    .history-actions { margin-left: 0; }
+  }
+</style>
 </head>
 <body>
-  <main class="container">
-    <header>
-      <h1>JSON Encoder / Decoder</h1>
-      <p class="sub">AES-GCM encryption with Base64 output, using your existing ID-derived key format.</p>
-    </header>
+<main>
+  <header>
+    <h1>JSON Encrypt / Decrypt</h1>
+    <p class="sub">AES-GCM 128-bit &middot; 12-byte IV &middot; base64(iv || ciphertext || tag)</p>
+  </header>
 
-    <section class="panel">
-      <h2>1. Key parameters</h2>
-      <p class="small">The first non-empty value wins: <code>auId</code>, then <code>tagLauncherId</code>, then <code>tagId</code>.</p>
-      <div class="grid">
-        <div><label for="auId">auId</label><input id="auId" autocomplete="off" placeholder="Enter auId"></div>
-        <div><label for="tagLauncherId">tagLauncherId</label><input id="tagLauncherId" autocomplete="off" placeholder="Enter tagLauncherId"></div>
-        <div><label for="tagId">tagId</label><input id="tagId" autocomplete="off" placeholder="Enter tagId"></div>
-      </div>
-      <div class="key-row">
-        <div style="flex:1; min-width:0">
-          <label for="derivedKey">Generated key (16 characters)</label>
-          <input id="derivedKey" type="password" readonly placeholder="Enter an ID above">
+  <div id="banner">Web Crypto is unavailable. Open this page via localhost or file:// in a modern browser.</div>
+
+  <div class="layout">
+    <section class="card key-card">
+      <h2>Key</h2>
+    <p class="hint">Paste a config URL to fill the network and tag/ad unit ids, or enter them manually. The key repeats the auId / tagId / tagLauncherId value to 16 characters.</p>
+    <div class="url-row">
+      <label>Config URL<input id="configUrl" type="url" placeholder="https://tags3-uat.performoo.com/giVaFrYow/am/gxUc_C0RI/data.json" autocomplete="off" spellcheck="false"></label>
+      <button id="useUrlBtn" class="secondary" type="button">Use URL</button>
+    </div>
+    <div id="urlStatus" class="status" aria-live="polite"></div>
+    <div class="grid">
+      <label>networkId<input id="netId" type="text" autocomplete="off" spellcheck="false"></label>
+      <label>auId / tagId / tagLauncherId<input id="keyId" type="text" autocomplete="off" spellcheck="false"></label>
+    </div>
+    <div class="derived">Effective key: <code id="effectiveKey">&mdash;</code> <span id="keyLength"></span></div>
+    </section>
+
+    <div class="workspace">
+      <div class="tabs" role="tablist" aria-label="Encrypt, decrypt or history">
+    <button id="encryptTab" type="button" role="tab" aria-controls="encryptPanel" aria-selected="true" class="active">Encrypt</button>
+    <button id="decryptTab" type="button" role="tab" aria-controls="decryptPanel" aria-selected="false">Decrypt</button>
+    <button id="historyTab" type="button" role="tab" aria-controls="historyPanel" aria-selected="false">History<span id="historyTabCount" class="tab-count" hidden>0</span></button>
+  </div>
+
+  <section id="encryptPanel" class="card panel" role="tabpanel" aria-labelledby="encryptTab">
+    <div class="field-head">
+      <span class="field-label">JSON</span>
+      <button id="formatBtn" class="secondary small" type="button">Format</button>
+    </div>
+    <textarea id="plainInput" placeholder='{"auId":"demo","enabled":true}' spellcheck="false"></textarea>
+    <div id="jsonEditorHost" class="json-editor-host" hidden></div>
+    <div class="actions">
+      <button id="encryptBtn" class="action" type="button">Encrypt</button>
+      <button id="encryptClearBtn" class="secondary" type="button">Clear</button>
+      <span id="encryptStatus" class="status" aria-live="polite"></span>
+    </div>
+    <p class="shortcut-hint">Ctrl/Cmd + Enter to encrypt &middot; Shift + Alt + F to format</p>
+    <div class="field-head output-field-head">
+      <span class="field-label">Encrypted (base64)</span>
+      <button id="copyCipherBtn" class="secondary copy" type="button" aria-label="Copy encrypted base64">Copy</button>
+    </div>
+    <input id="cipherOutput" type="text" readonly placeholder="Encrypted base64 will appear here" spellcheck="false">
+  </section>
+
+  <section id="decryptPanel" class="card panel" role="tabpanel" aria-labelledby="decryptTab" hidden>
+    <div class="field-head">
+      <span class="field-label">Encrypted (base64)</span>
+    </div>
+    <input id="cipherInput" type="text" placeholder="Paste encrypted base64 here" spellcheck="false">
+    <div class="actions">
+      <button id="decryptBtn" class="action" type="button">Decrypt</button>
+      <button id="decryptClearBtn" class="secondary" type="button">Clear</button>
+      <span id="decryptStatus" class="status" aria-live="polite"></span>
+    </div>
+    <div class="field-head output-field-head">
+      <span class="field-label">Decrypted</span>
+      <button id="copyPlainBtn" class="secondary copy" type="button" aria-label="Copy decrypted JSON">Copy</button>
+    </div>
+    <pre id="plainOutput" class="decrypt-output" data-placeholder="Decrypted JSON will appear here"></pre>
+    <div id="decryptEditorHost" class="json-editor-host json-output-host" hidden></div>
+  </section>
+
+  <section id="historyPanel" class="card panel" role="tabpanel" aria-labelledby="historyTab" hidden>
+    <div class="history-toolbar">
+      <div>
+        <div class="history-title">
+          <span class="field-label">History</span>
+          <span id="historyCount" class="history-hint"></span>
         </div>
-        <button id="toggleKey" type="button" style="align-self:end">Show key</button>
+        <p class="history-hint">Saved in this browser only.</p>
       </div>
-    </section>
+      <button id="clearHistoryBtn" class="secondary small" type="button" disabled>Clear history</button>
+    </div>
+    <div id="historyList" class="history-list"></div>
+  </section>
+    </div>
+  </div>
+</main>
 
-    <section class="panel">
-      <div class="tabs" role="group" aria-label="Operation mode">
-        <button id="encodeTab" type="button" aria-pressed="true">Encode JSON</button>
-        <button id="decodeTab" type="button" aria-pressed="false">Decode Base64</button>
-      </div>
-      <h2 id="inputHeading">2. Input JSON</h2>
-      <div class="editor-wrap"><textarea id="inputEditor" spellcheck="false"></textarea></div>
-      <div class="actions">
-        <button id="runButton" class="primary" type="button">Encrypt &amp; encode</button>
-        <button id="formatInput" type="button">Format JSON</button>
-        <button id="sampleButton" type="button">Load sample</button>
-        <button id="clearButton" type="button">Clear</button>
-      </div>
-      <p id="modeHint" class="small" style="margin-top:10px">Paste valid JSON. The encrypted output is Base64.</p>
-    </section>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+<script>
+(function () {
+  "use strict";
 
-    <section class="panel output">
-      <h2 id="outputHeading">3. Encoded output</h2>
-      <div class="editor-wrap"><textarea id="outputEditor" spellcheck="false"></textarea></div>
-      <div class="actions">
-        <button id="copyButton" type="button">Copy output</button>
-        <button id="formatOutput" type="button">Format decoded JSON</button>
-      </div>
-      <div id="status" class="status" role="status" aria-live="polite" style="margin-top:14px">Ready. Encryption and decryption run locally in your browser.</div>
-    </section>
+  var KEY_LENGTH = 16;
+  var IV_LENGTH = 12;
+  var enc = new TextEncoder();
+  var dec = new TextDecoder();
 
-    <section class="panel">
-      <h2>Compatibility notes</h2>
-      <p class="small">Output format: Base64 of the 12-byte IV followed by AES-GCM ciphertext and its 16-byte authentication tag. Encoding creates a fresh random IV each time, so the same JSON will not produce identical output on every run.</p>
-      <p class="small warning">This matches your reference for ASCII IDs. Your reference applies <code>btoa()</code> and then <code>atob()</code> to the key, which cancel each other out for ASCII. Non-ASCII IDs may behave differently. Use HTTPS or localhost because Web Crypto requires a secure context in most browsers.</p>
-    </section>
-  </main>
+  var netIdEl = document.getElementById("netId");
+  var keyIdEl = document.getElementById("keyId");
+  var configUrlEl = document.getElementById("configUrl");
+  var urlStatus = document.getElementById("urlStatus");
+  var effectiveKeyEl = document.getElementById("effectiveKey");
+  var keyLengthEl = document.getElementById("keyLength");
+  var plainInput = document.getElementById("plainInput");
+  var cipherOutput = document.getElementById("cipherOutput");
+  var cipherInput = document.getElementById("cipherInput");
+  var plainOutput = document.getElementById("plainOutput");
+  var encryptStatus = document.getElementById("encryptStatus");
+  var decryptStatus = document.getElementById("decryptStatus");
+  var historyListEl = document.getElementById("historyList");
+  var clearHistoryBtn = document.getElementById("clearHistoryBtn");
+  var historyCountEl = document.getElementById("historyCount");
+  var historyTabCountEl = document.getElementById("historyTabCount");
 
-  <script>
-    (() => {
-      "use strict";
+  if (!window.crypto || !window.crypto.subtle) {
+    document.getElementById("banner").style.display = "block";
+  }
 
-      const $ = (id) => document.getElementById(id);
-      const encoder = new TextEncoder();
-      const decoder = new TextDecoder();
-      let mode = "encode";
-      let keyVisible = false;
+  var jsonEditor = null;
+  var decryptEditor = null;
+  var monacoApi = null;
 
-      const inputEditor = CodeMirror.fromTextArea($("inputEditor"), {
-        mode: { name: "javascript", json: true },
-        theme: "material-darker",
-        lineNumbers: true,
-        lineWrapping: true,
-        tabSize: 2,
-        indentUnit: 2,
-        matchBrackets: true,
-        autofocus: false
-      });
-      const outputEditor = CodeMirror.fromTextArea($("outputEditor"), {
-        mode: { name: "javascript", json: true },
-        theme: "material-darker",
-        lineNumbers: true,
-        lineWrapping: true,
-        tabSize: 2,
-        indentUnit: 2,
-        readOnly: true
-      });
+  function getDecryptedText() {
+    return decryptEditor ? decryptEditor.getValue() : plainOutput.textContent;
+  }
 
-      function deriveKey() {
-        const auId = $("auId").value;
-        const tagLauncherId = $("tagLauncherId").value;
-        const tagId = $("tagId").value;
-        const seed = auId || tagLauncherId || tagId;
-        // Same repeat-then-truncate behavior as generateKeyFormConfig.
-        const key = seed ? seed.repeat(Math.ceil(16 / seed.length)).slice(0, 16) : "";
-        $("derivedKey").value = key;
-        $("derivedKey").type = keyVisible ? "text" : "password";
-        return key;
+  function isJsonText(text) {
+    try {
+      JSON.parse(text);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function setDecryptedText(text, isJson) {
+    if (decryptEditor) {
+      monacoApi.editor.setModelLanguage(decryptEditor.getModel(), isJson ? "json" : "plaintext");
+      decryptEditor.setValue(text);
+    } else {
+      plainOutput.textContent = text;
+    }
+  }
+
+  plainInput.addEventListener("keydown", function (event) {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      event.preventDefault();
+      document.getElementById("encryptBtn").click();
+    } else if (event.shiftKey && event.altKey && event.key.toLowerCase() === "f") {
+      event.preventDefault();
+      document.getElementById("formatBtn").click();
+    }
+  });
+
+  function getJsonText() {
+    return jsonEditor ? jsonEditor.getValue() : plainInput.value;
+  }
+
+  function setJsonText(value) {
+    if (jsonEditor) jsonEditor.setValue(value);
+    else plainInput.value = value;
+  }
+
+  function generateKeyFromId(id) {
+    if (!id) return "";
+    var key = "";
+    while (key.length <= KEY_LENGTH) key += id;
+    return key.substring(0, KEY_LENGTH);
+  }
+
+  function effectiveKey() {
+    return generateKeyFromId(keyIdEl.value);
+  }
+
+  function refreshKeyDisplay() {
+    var key = effectiveKey();
+    effectiveKeyEl.textContent = key || "\u2014";
+    if (!key) {
+      keyLengthEl.textContent = "";
+    } else {
+      var len = enc.encode(key).length;
+      keyLengthEl.textContent = "(" + len + " bytes" + (len === KEY_LENGTH ? "" : ", invalid") + ")";
+    }
+  }
+
+  keyIdEl.addEventListener("input", refreshKeyDisplay);
+
+  function parseConfigUrl(value) {
+    var url;
+    try {
+      url = new URL(value.trim());
+    } catch (e) {
+      throw new Error("Enter a valid URL.");
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      throw new Error("URL must start with http:// or https://.");
+    }
+
+    var segments = url.pathname.split("/").filter(function (segment) { return segment.length > 0; });
+    var markerIndex = -1;
+    for (var i = 0; i < segments.length - 1; i++) {
+      var marker = segments[i].toLowerCase();
+      if (marker === "au" || marker === "am") {
+        markerIndex = i;
+        break;
       }
+    }
+    if (markerIndex === -1) {
+      throw new Error("URL must contain /au/ or /am/ in its path.");
+    }
 
-      function setStatus(message, type = "") {
-        const el = $("status");
-        el.textContent = message;
-        el.className = "status" + (type ? " " + type : "");
+    var id;
+    try {
+      id = decodeURIComponent(segments[markerIndex + 1]);
+    } catch (e) {
+      id = segments[markerIndex + 1];
+    }
+    if (!id || /\.json$/i.test(id)) {
+      throw new Error("URL is missing the id after /" + segments[markerIndex] + "/.");
+    }
+
+    return {
+      kind: segments[markerIndex].toLowerCase(),
+      id: id,
+      netId: markerIndex > 0 ? segments[markerIndex - 1] : ""
+    };
+  }
+
+  function applyConfigUrl() {
+    try {
+      var parsed = parseConfigUrl(configUrlEl.value);
+      netIdEl.value = parsed.netId;
+      keyIdEl.value = parsed.id;
+      if (parsed.kind === "au") {
+        setStatus(urlStatus, "Using ad unit id " + parsed.id + " from URL", "success");
+      } else {
+        setStatus(urlStatus, "Using tag id " + parsed.id + " from URL", "success");
       }
+      refreshKeyDisplay();
+    } catch (e) {
+      setStatus(urlStatus, e.message, "error");
+    }
+  }
 
-      function setMode(nextMode) {
-        mode = nextMode;
-        const encoding = mode === "encode";
-        $("encodeTab").setAttribute("aria-pressed", String(encoding));
-        $("decodeTab").setAttribute("aria-pressed", String(!encoding));
-        $("inputHeading").textContent = encoding ? "2. Input JSON" : "2. Input Base64 ciphertext";
-        $("outputHeading").textContent = encoding ? "3. Encoded output" : "3. Decoded JSON";
-        $("runButton").textContent = encoding ? "Encrypt & encode" : "Decode & decrypt";
-        $("modeHint").textContent = encoding
-          ? "Paste valid JSON. The encrypted output is Base64."
-          : "Paste the Base64 string generated by the matching AES-GCM encryption format.";
-        inputEditor.setValue("");
-        outputEditor.setValue("");
-        inputEditor.setOption("mode", encoding ? { name: "javascript", json: true } : null);
-        outputEditor.setOption("mode", encoding ? null : { name: "javascript", json: true });
-        setStatus("Ready.");
+  document.getElementById("useUrlBtn").addEventListener("click", applyConfigUrl);
+  configUrlEl.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      applyConfigUrl();
+    }
+  });
+  configUrlEl.addEventListener("paste", function () {
+    setTimeout(applyConfigUrl, 0);
+  });
+
+  var tabs = [
+    document.getElementById("encryptTab"),
+    document.getElementById("decryptTab"),
+    document.getElementById("historyTab")
+  ];
+
+  function selectTab(tab) {
+    tabs.forEach(function (other) {
+      var selected = other === tab;
+      other.classList.toggle("active", selected);
+      other.setAttribute("aria-selected", selected ? "true" : "false");
+      document.getElementById(other.getAttribute("aria-controls")).hidden = !selected;
+    });
+  }
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      selectTab(tab);
+    });
+  });
+
+  var HISTORY_KEY = "yaas-encryption-tool-history-v1";
+  var HISTORY_LIMIT = 50;
+  var historyEntries = loadHistoryEntries();
+
+  function loadHistoryEntries() {
+    try {
+      var raw = window.localStorage.getItem(HISTORY_KEY);
+      if (!raw) return [];
+      var parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(function (entry) {
+        return entry &&
+          (entry.type === "encrypt" || entry.type === "decrypt") &&
+          typeof entry.input === "string" &&
+          typeof entry.output === "string";
+      }).slice(0, HISTORY_LIMIT);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function persistHistory() {
+    try {
+      window.localStorage.setItem(HISTORY_KEY, JSON.stringify(historyEntries));
+    } catch (e) {
+      // Storage can be unavailable in private browsing; history stays in memory.
+    }
+  }
+
+  function addHistoryEntry(type, input, output) {
+    var entry = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      type: type,
+      ts: Date.now(),
+      netId: netIdEl.value,
+      keyId: keyIdEl.value,
+      url: configUrlEl.value,
+      input: input,
+      output: output
+    };
+
+    var latest = historyEntries[0];
+    if (latest && latest.type === entry.type && latest.netId === entry.netId &&
+        latest.keyId === entry.keyId && latest.input === entry.input && latest.output === entry.output) {
+      return;
+    }
+
+    historyEntries.unshift(entry);
+    if (historyEntries.length > HISTORY_LIMIT) historyEntries.length = HISTORY_LIMIT;
+    persistHistory();
+    renderHistory();
+  }
+
+  function historyPreview(value) {
+    var flat = String(value || "").replace(/\s+/g, " ").trim();
+    return flat.length > 180 ? flat.slice(0, 177) + "..." : flat;
+  }
+
+  function historyRow(label, value) {
+    var row = document.createElement("div");
+    row.className = "history-row";
+    var labelEl = document.createElement("span");
+    labelEl.textContent = label;
+    var code = document.createElement("code");
+    code.textContent = historyPreview(value);
+    code.title = value;
+    row.appendChild(labelEl);
+    row.appendChild(code);
+    return row;
+  }
+
+  function buildHistoryItem(entry) {
+    var item = document.createElement("article");
+    item.className = "history-item";
+
+    var head = document.createElement("div");
+    head.className = "history-head";
+
+    var badge = document.createElement("span");
+    badge.className = "history-badge " + entry.type;
+    badge.textContent = entry.type;
+
+    var time = document.createElement("span");
+    time.className = "history-time";
+    time.textContent = new Date(entry.ts).toLocaleString();
+
+    var actions = document.createElement("div");
+    actions.className = "history-actions";
+
+    var loadBtn = document.createElement("button");
+    loadBtn.type = "button";
+    loadBtn.className = "secondary small";
+    loadBtn.textContent = "Load";
+    loadBtn.addEventListener("click", function () {
+      restoreHistoryEntry(entry);
+    });
+
+    var deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "danger small";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", function () {
+      deleteHistoryEntry(entry.id);
+    });
+
+    actions.appendChild(loadBtn);
+    actions.appendChild(deleteBtn);
+    head.appendChild(badge);
+    head.appendChild(time);
+    head.appendChild(actions);
+
+    var metaParts = [];
+    if (entry.netId) metaParts.push("networkId " + entry.netId.trim());
+    if (entry.keyId) metaParts.push("id " + entry.keyId.trim());
+    var meta = document.createElement("p");
+    meta.className = "history-meta";
+    meta.textContent = metaParts.length ? metaParts.join(" \u00b7 ") : "No key context";
+
+    var previews = document.createElement("div");
+    previews.className = "history-preview";
+    previews.appendChild(historyRow("Input", entry.input));
+    previews.appendChild(historyRow("Output", entry.output));
+
+    item.appendChild(head);
+    item.appendChild(meta);
+    item.appendChild(previews);
+    return item;
+  }
+
+  function renderHistory() {
+    historyListEl.textContent = "";
+    if (historyEntries.length === 0) {
+      var empty = document.createElement("p");
+      empty.className = "history-empty";
+      empty.textContent = "No history yet. Encrypt or decrypt something and it will appear here.";
+      historyListEl.appendChild(empty);
+    } else {
+      historyEntries.forEach(function (entry) {
+        historyListEl.appendChild(buildHistoryItem(entry));
+      });
+    }
+
+    clearHistoryBtn.disabled = historyEntries.length === 0;
+    historyCountEl.textContent = historyEntries.length
+      ? historyEntries.length + (historyEntries.length === 1 ? " saved item" : " saved items")
+      : "";
+
+    if (historyEntries.length) {
+      historyTabCountEl.hidden = false;
+      historyTabCountEl.textContent = historyEntries.length > 99 ? "99+" : String(historyEntries.length);
+    } else {
+      historyTabCountEl.hidden = true;
+      historyTabCountEl.textContent = "";
+    }
+  }
+
+  function deleteHistoryEntry(id) {
+    historyEntries = historyEntries.filter(function (entry) {
+      return entry.id !== id;
+    });
+    persistHistory();
+    renderHistory();
+  }
+
+  function restoreHistoryEntry(entry) {
+    netIdEl.value = entry.netId || "";
+    keyIdEl.value = entry.keyId || "";
+    configUrlEl.value = entry.url || "";
+    setStatus(urlStatus, "", "");
+    refreshKeyDisplay();
+
+    if (entry.type === "encrypt") {
+      setJsonText(entry.input);
+      cipherOutput.value = entry.output;
+      setStatus(encryptStatus, "Loaded from history", "success");
+      selectTab(document.getElementById("encryptTab"));
+    } else {
+      cipherInput.value = entry.input;
+      setDecryptedText(entry.output, isJsonText(entry.output));
+      setStatus(decryptStatus, "Loaded from history", "success");
+      selectTab(document.getElementById("decryptTab"));
+    }
+  }
+
+  clearHistoryBtn.addEventListener("click", function () {
+    if (historyEntries.length === 0) return;
+    if (window.confirm("Clear all saved history?")) {
+      historyEntries = [];
+      persistHistory();
+      renderHistory();
+    }
+  });
+
+  function keyBytesOrThrow() {
+    var key = effectiveKey();
+    if (!key) {
+      throw new Error("Enter an auId / tagId / tagLauncherId value.");
+    }
+    var bytes = enc.encode(key);
+    if (bytes.length !== KEY_LENGTH) {
+      throw new Error("Key must be exactly " + KEY_LENGTH + " bytes (got " + bytes.length + ").");
+    }
+    return bytes;
+  }
+
+  async function importKey(bytes, usage) {
+    if (!window.crypto || !window.crypto.subtle) {
+      throw new Error("Web Crypto is not available in this context.");
+    }
+    return crypto.subtle.importKey("raw", bytes, { name: "AES-GCM" }, false, [usage]);
+  }
+
+  function bytesToBase64(bytes) {
+    var binary = "";
+    var chunk = 0x8000;
+    for (var i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+  }
+
+  function base64ToBytes(value) {
+    var cleaned = value.replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
+    if (!cleaned) throw new Error("Encrypted input is empty.");
+    if (cleaned.length % 4 !== 0) cleaned += "====".slice(cleaned.length % 4);
+    var binary;
+    try {
+      binary = atob(cleaned);
+    } catch (e) {
+      throw new Error("Encrypted input is not valid base64.");
+    }
+    return Uint8Array.from(binary, function (c) { return c.charCodeAt(0); });
+  }
+
+  async function encryptJson(jsonText) {
+    JSON.parse(jsonText);
+    var key = await importKey(keyBytesOrThrow(), "encrypt");
+    var iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+    var ciphertext = new Uint8Array(
+      await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv, tagLength: 128 }, key, enc.encode(jsonText))
+    );
+    var combined = new Uint8Array(iv.length + ciphertext.length);
+    combined.set(iv, 0);
+    combined.set(ciphertext, iv.length);
+    return bytesToBase64(combined);
+  }
+
+  async function decryptToJson(encoded) {
+    var bytes = base64ToBytes(encoded);
+    if (bytes.length <= IV_LENGTH) {
+      throw new Error("Encrypted input is too short (missing IV or ciphertext).");
+    }
+    var iv = bytes.slice(0, IV_LENGTH);
+    var ciphertext = bytes.slice(IV_LENGTH);
+    var key = await importKey(keyBytesOrThrow(), "decrypt");
+    var plainBytes;
+    try {
+      plainBytes = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv, tagLength: 128 }, key, ciphertext);
+    } catch (e) {
+      throw new Error("Decryption failed. Check the key and encrypted data.");
+    }
+    var text = dec.decode(plainBytes);
+    try {
+      return { text: text, json: JSON.parse(text) };
+    } catch (e) {
+      return { text: text, json: null };
+    }
+  }
+
+  function setStatus(el, message, type) {
+    el.textContent = message;
+    el.className = "status" + (type ? " " + type : "");
+  }
+
+  function byteLength(text) {
+    return enc.encode(text).length;
+  }
+
+  document.getElementById("formatBtn").addEventListener("click", function () {
+    var text = getJsonText();
+    if (!text.trim()) {
+      setStatus(encryptStatus, "Enter JSON to format.", "error");
+      return;
+    }
+    try {
+      setJsonText(JSON.stringify(JSON.parse(text), null, 2));
+      setStatus(encryptStatus, "Formatted JSON", "success");
+    } catch (e) {
+      setStatus(encryptStatus, "Invalid JSON: " + e.message, "error");
+    }
+  });
+
+  document.getElementById("encryptBtn").addEventListener("click", async function () {
+    setStatus(encryptStatus, "Encrypting\u2026", "");
+    try {
+      var jsonText = getJsonText();
+      if (!jsonText.trim()) throw new Error("Enter JSON to encrypt.");
+      var encrypted = await encryptJson(jsonText);
+      cipherOutput.value = encrypted;
+      addHistoryEntry("encrypt", jsonText, encrypted);
+      setStatus(encryptStatus, "Encrypted " + byteLength(jsonText) + " bytes", "success");
+    } catch (e) {
+      cipherOutput.value = "";
+      setStatus(encryptStatus, e instanceof SyntaxError ? "Invalid JSON: " + e.message : e.message, "error");
+    }
+  });
+
+  document.getElementById("decryptBtn").addEventListener("click", async function () {
+    setStatus(decryptStatus, "Decrypting\u2026", "");
+    setDecryptedText("", true);
+    try {
+      var result = await decryptToJson(cipherInput.value);
+      var input = cipherInput.value.trim();
+      if (result.json !== null) {
+        var pretty = JSON.stringify(result.json, null, 2);
+        setDecryptedText(pretty, true);
+        addHistoryEntry("decrypt", input, pretty);
+        setStatus(decryptStatus, "Decrypted valid JSON", "success");
+      } else {
+        setDecryptedText(result.text, false);
+        addHistoryEntry("decrypt", input, result.text);
+        setStatus(decryptStatus, "Decrypted, but result is not valid JSON", "error");
       }
+    } catch (e) {
+      setStatus(decryptStatus, e.message, "error");
+    }
+  });
 
-      function toBase64(bytes) {
-        let binary = "";
-        const chunkSize = 0x8000;
-        for (let i = 0; i < bytes.length; i += chunkSize) {
-          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-        }
-        return btoa(binary);
+  plainInput.addEventListener("input", function () {
+    cipherOutput.value = "";
+    setStatus(encryptStatus, "", "");
+  });
+
+  cipherInput.addEventListener("input", function () {
+    setDecryptedText("", true);
+    setStatus(decryptStatus, "", "");
+  });
+
+  [netIdEl, keyIdEl].forEach(function (el) {
+    el.addEventListener("input", function () {
+      setStatus(urlStatus, "", "");
+    });
+  });
+
+  function copyText(text, button) {
+    if (!text) return;
+    var done = function () {
+      var original = button.textContent;
+      button.textContent = "Copied";
+      setTimeout(function () { button.textContent = original; }, 1200);
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+
+  function fallbackCopy(text, done) {
+    var area = document.createElement("textarea");
+    area.value = text;
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    try { document.execCommand("copy"); done(); } catch (e) { /* ignore */ }
+    document.body.removeChild(area);
+  }
+
+  document.getElementById("copyCipherBtn").addEventListener("click", function () {
+    copyText(cipherOutput.value, this);
+  });
+  document.getElementById("copyPlainBtn").addEventListener("click", function () {
+    copyText(getDecryptedText(), this);
+  });
+
+  document.getElementById("encryptClearBtn").addEventListener("click", function () {
+    setJsonText("");
+    cipherOutput.value = "";
+    setStatus(encryptStatus, "", "");
+  });
+  document.getElementById("decryptClearBtn").addEventListener("click", function () {
+    cipherInput.value = "";
+    setDecryptedText("", true);
+    setStatus(decryptStatus, "", "");
+  });
+
+  function initJsonEditor(monaco) {
+    monacoApi = monaco;
+    var host = document.getElementById("jsonEditorHost");
+    var initialValue = plainInput.value;
+
+    monaco.editor.defineTheme("yaas-light", {
+      base: "vs",
+      inherit: true,
+      rules: [],
+      colors: {
+        "editor.background": "#fbfdff",
+        "editor.lineHighlightBackground": "#f1f5f9",
+        "editorLineNumber.foreground": "#94a3b8",
+        "editorLineNumber.activeForeground": "#475569",
+        "editorGutter.background": "#fbfdff",
+        "editor.selectionBackground": "#dbeafe",
+        "editorIndentGuide.background1": "#e2e8f0",
+        "editorIndentGuide.activeBackground1": "#cbd5e1"
       }
+    });
 
-      function fromBase64(value) {
-        const compact = value.replace(/\s/g, "");
-        const binary = atob(compact);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        return bytes;
-      }
+    host.hidden = false;
+    jsonEditor = monaco.editor.create(host, {
+      value: initialValue,
+      language: "json",
+      theme: "yaas-light",
+      automaticLayout: true,
+      minimap: { enabled: false },
+      lineNumbers: "on",
+      glyphMargin: true,
+      folding: true,
+      fontSize: 13,
+      fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      tabSize: 2,
+      insertSpaces: true,
+      wordWrap: "on",
+      scrollBeyondLastLine: false,
+      renderLineHighlight: "line",
+      padding: { top: 12, bottom: 12 },
+      formatOnPaste: true,
+      quickSuggestions: false,
+      suggestOnTriggerCharacters: false,
+      fixedOverflowWidgets: true,
+      bracketPairColorization: { enabled: true },
+      guides: { indentation: false, bracketPairs: false },
+      overviewRulerLanes: 0,
+      hideCursorInOverviewRuler: true,
+      overviewRulerBorder: false,
+      scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 }
+    });
+    plainInput.style.display = "none";
 
-      async function run() {
-        try {
-          if (!window.crypto || !crypto.subtle) {
-            throw new Error("Web Crypto is unavailable. Open this page in a secure browser context (HTTPS or localhost).");
-          }
+    var decryptHost = document.getElementById("decryptEditorHost");
+    var existingOutput = plainOutput.textContent;
+    decryptHost.hidden = false;
+    decryptEditor = monaco.editor.create(decryptHost, {
+      value: "",
+      language: "json",
+      theme: "yaas-light",
+      readOnly: true,
+      domReadOnly: true,
+      automaticLayout: true,
+      minimap: { enabled: false },
+      lineNumbers: "on",
+      glyphMargin: false,
+      folding: true,
+      fontSize: 13,
+      fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      tabSize: 2,
+      insertSpaces: true,
+      wordWrap: "on",
+      scrollBeyondLastLine: false,
+      renderLineHighlight: "none",
+      selectionHighlight: false,
+      padding: { top: 12, bottom: 12 },
+      quickSuggestions: false,
+      fixedOverflowWidgets: true,
+      bracketPairColorization: { enabled: true },
+      guides: { indentation: false, bracketPairs: false },
+      overviewRulerLanes: 0,
+      hideCursorInOverviewRuler: true,
+      overviewRulerBorder: false,
+      scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 }
+    });
+    plainOutput.hidden = true;
+    if (existingOutput) setDecryptedText(existingOutput, isJsonText(existingOutput));
 
-          const keyText = deriveKey();
-          if (!keyText) throw new Error("Enter at least one key parameter: auId, tagLauncherId, or tagId.");
+    jsonEditor.onDidChangeModelContent(function () {
+      cipherOutput.value = "";
+      setStatus(encryptStatus, "", "");
+    });
 
-          const keyBytes = encoder.encode(keyText);
-          if (keyBytes.length !== 16) {
-            throw new Error("The generated key must be exactly 16 bytes in UTF-8. Use ASCII IDs to match the reference implementation.");
-          }
+    jsonEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, function () {
+      document.getElementById("encryptBtn").click();
+    });
+    jsonEditor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, function () {
+      document.getElementById("formatBtn").click();
+    });
 
-          const cryptoKey = await crypto.subtle.importKey(
-            "raw", keyBytes, { name: "AES-GCM" }, false,
-            mode === "encode" ? ["encrypt"] : ["decrypt"]
-          );
+    jsonEditor.focus();
+  }
 
-          if (mode === "encode") {
-            let parsed;
-            try {
-              parsed = JSON.parse(inputEditor.getValue());
-            } catch (error) {
-              throw new Error("Invalid JSON: " + error.message);
-            }
+  if (window.require) {
+    require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs" } });
+    require(["vs/editor/editor.main"], function () {
+      if (window.monaco) initJsonEditor(window.monaco);
+    });
+  }
 
-            const iv = crypto.getRandomValues(new Uint8Array(12));
-            const plaintext = encoder.encode(JSON.stringify(parsed));
-            const ciphertext = new Uint8Array(await crypto.subtle.encrypt(
-              { name: "AES-GCM", iv, tagLength: 128 }, cryptoKey, plaintext
-            ));
-            const packed = new Uint8Array(iv.length + ciphertext.length);
-            packed.set(iv, 0);
-            packed.set(ciphertext, iv.length);
-            outputEditor.setValue(toBase64(packed));
-            setStatus("Encryption successful. Output is Base64(IV + ciphertext + authentication tag).", "success");
-          } else {
-            const packed = fromBase64(inputEditor.getValue().trim());
-            if (packed.length < 28) {
-              throw new Error("Ciphertext is too short. Expected a 12-byte IV and at least a 16-byte authentication tag.");
-            }
-            const iv = packed.slice(0, 12);
-            const ciphertext = packed.slice(12);
-            const plaintext = await crypto.subtle.decrypt(
-              { name: "AES-GCM", iv, tagLength: 128 }, cryptoKey, ciphertext
-            );
-            const text = decoder.decode(plaintext);
-            let parsed;
-            try {
-              parsed = JSON.parse(text);
-            } catch (error) {
-              throw new Error("Decryption succeeded, but plaintext is not valid JSON: " + error.message);
-            }
-            outputEditor.setValue(JSON.stringify(parsed, null, 2));
-            setStatus("Decryption successful. Valid, formatted JSON recovered.", "success");
-          }
-        } catch (error) {
-          const message = error.name === "OperationError"
-            ? "Decryption failed. Check the key parameters and ciphertext; the data may be corrupted or encrypted with a different key."
-            : error.message || String(error);
-          setStatus("Error: " + message, "error");
-        }
-      }
-
-      ["auId", "tagLauncherId", "tagId"].forEach(id => $(id).addEventListener("input", deriveKey));
-      $("toggleKey").addEventListener("click", () => {
-        keyVisible = !keyVisible;
-        $("toggleKey").textContent = keyVisible ? "Hide key" : "Show key";
-        deriveKey();
-      });
-      $("encodeTab").addEventListener("click", () => setMode("encode"));
-      $("decodeTab").addEventListener("click", () => setMode("decode"));
-      $("runButton").addEventListener("click", run);
-
-      $("formatInput").addEventListener("click", () => {
-        try {
-          inputEditor.setValue(JSON.stringify(JSON.parse(inputEditor.getValue()), null, 2));
-          setStatus("Input JSON formatted.", "success");
-        } catch (error) {
-          setStatus("Cannot format invalid JSON: " + error.message, "error");
-        }
-      });
-
-      $("formatOutput").addEventListener("click", () => {
-        try {
-          outputEditor.setValue(JSON.stringify(JSON.parse(outputEditor.getValue()), null, 2));
-          setStatus("Output JSON formatted.", "success");
-        } catch (error) {
-          setStatus("Output is not valid JSON. Decode a payload first.", "error");
-        }
-      });
-
-      $("sampleButton").addEventListener("click", () => {
-        if (mode === "encode") {
-          inputEditor.setValue(JSON.stringify({
-            auId: "demo-123",
-            enabled: true,
-            settings: { theme: "dark", retries: 3 },
-            tags: ["example", "json"]
-          }, null, 2));
-          setStatus("Sample JSON loaded. Enter the correct key parameters before encoding.");
-        } else {
-          inputEditor.setValue("");
-          setStatus("Paste an encoded Base64 payload to decode.");
-        }
-      });
-
-      $("clearButton").addEventListener("click", () => {
-        inputEditor.setValue("");
-        outputEditor.setValue("");
-        setStatus("Cleared.");
-      });
-
-      $("copyButton").addEventListener("click", async () => {
-        const value = outputEditor.getValue();
-        if (!value) {
-          setStatus("There is no output to copy.", "error");
-          return;
-        }
-        try {
-          await navigator.clipboard.writeText(value);
-          setStatus("Output copied to clipboard.", "success");
-        } catch (_) {
-          outputEditor.focus();
-          outputEditor.execCommand("selectAll");
-          setStatus("Clipboard access was blocked. Output selected; copy it manually.");
-        }
-      });
-
-      deriveKey();
-      inputEditor.setValue(JSON.stringify({ hello: "world" }, null, 2));
-    })();
-  </script>
+  renderHistory();
+  refreshKeyDisplay();
+})();
+</script>
+<!-- Code injected by live-server -->
+<script>
+	// <![CDATA[  <-- For SVG support
+	if ('WebSocket' in window) {
+		(function () {
+			function refreshCSS() {
+				var sheets = [].slice.call(document.getElementsByTagName("link"));
+				var head = document.getElementsByTagName("head")[0];
+				for (var i = 0; i < sheets.length; ++i) {
+					var elem = sheets[i];
+					var parent = elem.parentElement || head;
+					parent.removeChild(elem);
+					var rel = elem.rel;
+					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+					}
+					parent.appendChild(elem);
+				}
+			}
+			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+			var address = protocol + window.location.host + window.location.pathname + '/ws';
+			var socket = new WebSocket(address);
+			socket.onmessage = function (msg) {
+				if (msg.data == 'reload') window.location.reload();
+				else if (msg.data == 'refreshcss') refreshCSS();
+			};
+			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+				console.log('Live reload enabled.');
+				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+			}
+		})();
+	}
+	else {
+		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+	}
+	// ]]>
+</script>
 </body>
 </html>
