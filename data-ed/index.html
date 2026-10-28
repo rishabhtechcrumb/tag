@@ -1,0 +1,358 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JSON AES-GCM Encoder / Decoder</title>
+
+  <!-- CodeMirror 5: syntax highlighting, line numbers, and JSON editing -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --text: #182230;
+      --muted: #667085;
+      --border: #d9e0ea;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --success: #067647;
+      --error: #b42318;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 28px 16px 48px;
+      background: var(--bg); color: var(--text);
+      font: 15px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .container { max-width: 1080px; margin: 0 auto; }
+    header { margin-bottom: 22px; }
+    h1 { margin: 0 0 6px; font-size: clamp(25px, 4vw, 34px); letter-spacing: -.03em; }
+    h2 { margin: 0 0 14px; font-size: 17px; }
+    p { margin: 0 0 12px; }
+    .sub { color: var(--muted); }
+    .panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px; margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(16, 24, 40, .035);
+    }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    label { display: block; font-weight: 650; margin-bottom: 6px; }
+    input, textarea {
+      display: block; width: 100%; border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px; font: inherit; color: var(--text);
+      background: #fff;
+    }
+    input:focus, textarea:focus { outline: 2px solid #bfdbfe; border-color: var(--accent); }
+    .key-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+    .key-row input { flex: 1; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+    button {
+      border: 1px solid var(--border); border-radius: 9px; padding: 9px 14px;
+      background: white; color: var(--text); font: inherit; font-weight: 650; cursor: pointer;
+    }
+    button:hover { background: #f1f5f9; }
+    button.primary { color: #fff; background: var(--accent); border-color: var(--accent); }
+    button.primary:hover { background: var(--accent-hover); }
+    button[aria-pressed="true"] { border-color: var(--accent); background: #eff6ff; color: #1d4ed8; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .editor-wrap { border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+    .CodeMirror {
+      height: 280px; font: 13px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    .output .CodeMirror { height: 280px; }
+    .status { padding: 11px 13px; border-radius: 9px; background: #f2f4f7; color: var(--muted); overflow-wrap: anywhere; }
+    .status.success { background: #ecfdf3; color: var(--success); }
+    .status.error { background: #fef3f2; color: var(--error); }
+    .small { font-size: 13px; color: var(--muted); }
+    .warning { border-left: 3px solid #f79009; padding-left: 12px; }
+    @media (max-width: 680px) {
+      .grid { grid-template-columns: 1fr; }
+      .panel { padding: 15px; }
+      body { padding: 18px 10px 36px; }
+      .CodeMirror { height: 240px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>JSON Encoder / Decoder</h1>
+      <p class="sub">AES-GCM encryption with Base64 output, using your existing ID-derived key format.</p>
+    </header>
+
+    <section class="panel">
+      <h2>1. Key parameters</h2>
+      <p class="small">The first non-empty value wins: <code>auId</code>, then <code>tagLauncherId</code>, then <code>tagId</code>.</p>
+      <div class="grid">
+        <div><label for="auId">auId</label><input id="auId" autocomplete="off" placeholder="Enter auId"></div>
+        <div><label for="tagLauncherId">tagLauncherId</label><input id="tagLauncherId" autocomplete="off" placeholder="Enter tagLauncherId"></div>
+        <div><label for="tagId">tagId</label><input id="tagId" autocomplete="off" placeholder="Enter tagId"></div>
+      </div>
+      <div class="key-row">
+        <div style="flex:1; min-width:0">
+          <label for="derivedKey">Generated key (16 characters)</label>
+          <input id="derivedKey" type="password" readonly placeholder="Enter an ID above">
+        </div>
+        <button id="toggleKey" type="button" style="align-self:end">Show key</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="tabs" role="group" aria-label="Operation mode">
+        <button id="encodeTab" type="button" aria-pressed="true">Encode JSON</button>
+        <button id="decodeTab" type="button" aria-pressed="false">Decode Base64</button>
+      </div>
+      <h2 id="inputHeading">2. Input JSON</h2>
+      <div class="editor-wrap"><textarea id="inputEditor" spellcheck="false"></textarea></div>
+      <div class="actions">
+        <button id="runButton" class="primary" type="button">Encrypt &amp; encode</button>
+        <button id="formatInput" type="button">Format JSON</button>
+        <button id="sampleButton" type="button">Load sample</button>
+        <button id="clearButton" type="button">Clear</button>
+      </div>
+      <p id="modeHint" class="small" style="margin-top:10px">Paste valid JSON. The encrypted output is Base64.</p>
+    </section>
+
+    <section class="panel output">
+      <h2 id="outputHeading">3. Encoded output</h2>
+      <div class="editor-wrap"><textarea id="outputEditor" spellcheck="false"></textarea></div>
+      <div class="actions">
+        <button id="copyButton" type="button">Copy output</button>
+        <button id="formatOutput" type="button">Format decoded JSON</button>
+      </div>
+      <div id="status" class="status" role="status" aria-live="polite" style="margin-top:14px">Ready. Encryption and decryption run locally in your browser.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Compatibility notes</h2>
+      <p class="small">Output format: Base64 of the 12-byte IV followed by AES-GCM ciphertext and its 16-byte authentication tag. Encoding creates a fresh random IV each time, so the same JSON will not produce identical output on every run.</p>
+      <p class="small warning">This matches your reference for ASCII IDs. Your reference applies <code>btoa()</code> and then <code>atob()</code> to the key, which cancel each other out for ASCII. Non-ASCII IDs may behave differently. Use HTTPS or localhost because Web Crypto requires a secure context in most browsers.</p>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const $ = (id) => document.getElementById(id);
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      let mode = "encode";
+      let keyVisible = false;
+
+      const inputEditor = CodeMirror.fromTextArea($("inputEditor"), {
+        mode: { name: "javascript", json: true },
+        theme: "material-darker",
+        lineNumbers: true,
+        lineWrapping: true,
+        tabSize: 2,
+        indentUnit: 2,
+        matchBrackets: true,
+        autofocus: false
+      });
+      const outputEditor = CodeMirror.fromTextArea($("outputEditor"), {
+        mode: { name: "javascript", json: true },
+        theme: "material-darker",
+        lineNumbers: true,
+        lineWrapping: true,
+        tabSize: 2,
+        indentUnit: 2,
+        readOnly: true
+      });
+
+      function deriveKey() {
+        const auId = $("auId").value;
+        const tagLauncherId = $("tagLauncherId").value;
+        const tagId = $("tagId").value;
+        const seed = auId || tagLauncherId || tagId;
+        // Same repeat-then-truncate behavior as generateKeyFormConfig.
+        const key = seed ? seed.repeat(Math.ceil(16 / seed.length)).slice(0, 16) : "";
+        $("derivedKey").value = key;
+        $("derivedKey").type = keyVisible ? "text" : "password";
+        return key;
+      }
+
+      function setStatus(message, type = "") {
+        const el = $("status");
+        el.textContent = message;
+        el.className = "status" + (type ? " " + type : "");
+      }
+
+      function setMode(nextMode) {
+        mode = nextMode;
+        const encoding = mode === "encode";
+        $("encodeTab").setAttribute("aria-pressed", String(encoding));
+        $("decodeTab").setAttribute("aria-pressed", String(!encoding));
+        $("inputHeading").textContent = encoding ? "2. Input JSON" : "2. Input Base64 ciphertext";
+        $("outputHeading").textContent = encoding ? "3. Encoded output" : "3. Decoded JSON";
+        $("runButton").textContent = encoding ? "Encrypt & encode" : "Decode & decrypt";
+        $("modeHint").textContent = encoding
+          ? "Paste valid JSON. The encrypted output is Base64."
+          : "Paste the Base64 string generated by the matching AES-GCM encryption format.";
+        inputEditor.setValue("");
+        outputEditor.setValue("");
+        inputEditor.setOption("mode", encoding ? { name: "javascript", json: true } : null);
+        outputEditor.setOption("mode", encoding ? null : { name: "javascript", json: true });
+        setStatus("Ready.");
+      }
+
+      function toBase64(bytes) {
+        let binary = "";
+        const chunkSize = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+        }
+        return btoa(binary);
+      }
+
+      function fromBase64(value) {
+        const compact = value.replace(/\s/g, "");
+        const binary = atob(compact);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return bytes;
+      }
+
+      async function run() {
+        try {
+          if (!window.crypto || !crypto.subtle) {
+            throw new Error("Web Crypto is unavailable. Open this page in a secure browser context (HTTPS or localhost).");
+          }
+
+          const keyText = deriveKey();
+          if (!keyText) throw new Error("Enter at least one key parameter: auId, tagLauncherId, or tagId.");
+
+          const keyBytes = encoder.encode(keyText);
+          if (keyBytes.length !== 16) {
+            throw new Error("The generated key must be exactly 16 bytes in UTF-8. Use ASCII IDs to match the reference implementation.");
+          }
+
+          const cryptoKey = await crypto.subtle.importKey(
+            "raw", keyBytes, { name: "AES-GCM" }, false,
+            mode === "encode" ? ["encrypt"] : ["decrypt"]
+          );
+
+          if (mode === "encode") {
+            let parsed;
+            try {
+              parsed = JSON.parse(inputEditor.getValue());
+            } catch (error) {
+              throw new Error("Invalid JSON: " + error.message);
+            }
+
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const plaintext = encoder.encode(JSON.stringify(parsed));
+            const ciphertext = new Uint8Array(await crypto.subtle.encrypt(
+              { name: "AES-GCM", iv, tagLength: 128 }, cryptoKey, plaintext
+            ));
+            const packed = new Uint8Array(iv.length + ciphertext.length);
+            packed.set(iv, 0);
+            packed.set(ciphertext, iv.length);
+            outputEditor.setValue(toBase64(packed));
+            setStatus("Encryption successful. Output is Base64(IV + ciphertext + authentication tag).", "success");
+          } else {
+            const packed = fromBase64(inputEditor.getValue().trim());
+            if (packed.length < 28) {
+              throw new Error("Ciphertext is too short. Expected a 12-byte IV and at least a 16-byte authentication tag.");
+            }
+            const iv = packed.slice(0, 12);
+            const ciphertext = packed.slice(12);
+            const plaintext = await crypto.subtle.decrypt(
+              { name: "AES-GCM", iv, tagLength: 128 }, cryptoKey, ciphertext
+            );
+            const text = decoder.decode(plaintext);
+            let parsed;
+            try {
+              parsed = JSON.parse(text);
+            } catch (error) {
+              throw new Error("Decryption succeeded, but plaintext is not valid JSON: " + error.message);
+            }
+            outputEditor.setValue(JSON.stringify(parsed, null, 2));
+            setStatus("Decryption successful. Valid, formatted JSON recovered.", "success");
+          }
+        } catch (error) {
+          const message = error.name === "OperationError"
+            ? "Decryption failed. Check the key parameters and ciphertext; the data may be corrupted or encrypted with a different key."
+            : error.message || String(error);
+          setStatus("Error: " + message, "error");
+        }
+      }
+
+      ["auId", "tagLauncherId", "tagId"].forEach(id => $(id).addEventListener("input", deriveKey));
+      $("toggleKey").addEventListener("click", () => {
+        keyVisible = !keyVisible;
+        $("toggleKey").textContent = keyVisible ? "Hide key" : "Show key";
+        deriveKey();
+      });
+      $("encodeTab").addEventListener("click", () => setMode("encode"));
+      $("decodeTab").addEventListener("click", () => setMode("decode"));
+      $("runButton").addEventListener("click", run);
+
+      $("formatInput").addEventListener("click", () => {
+        try {
+          inputEditor.setValue(JSON.stringify(JSON.parse(inputEditor.getValue()), null, 2));
+          setStatus("Input JSON formatted.", "success");
+        } catch (error) {
+          setStatus("Cannot format invalid JSON: " + error.message, "error");
+        }
+      });
+
+      $("formatOutput").addEventListener("click", () => {
+        try {
+          outputEditor.setValue(JSON.stringify(JSON.parse(outputEditor.getValue()), null, 2));
+          setStatus("Output JSON formatted.", "success");
+        } catch (error) {
+          setStatus("Output is not valid JSON. Decode a payload first.", "error");
+        }
+      });
+
+      $("sampleButton").addEventListener("click", () => {
+        if (mode === "encode") {
+          inputEditor.setValue(JSON.stringify({
+            auId: "demo-123",
+            enabled: true,
+            settings: { theme: "dark", retries: 3 },
+            tags: ["example", "json"]
+          }, null, 2));
+          setStatus("Sample JSON loaded. Enter the correct key parameters before encoding.");
+        } else {
+          inputEditor.setValue("");
+          setStatus("Paste an encoded Base64 payload to decode.");
+        }
+      });
+
+      $("clearButton").addEventListener("click", () => {
+        inputEditor.setValue("");
+        outputEditor.setValue("");
+        setStatus("Cleared.");
+      });
+
+      $("copyButton").addEventListener("click", async () => {
+        const value = outputEditor.getValue();
+        if (!value) {
+          setStatus("There is no output to copy.", "error");
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(value);
+          setStatus("Output copied to clipboard.", "success");
+        } catch (_) {
+          outputEditor.focus();
+          outputEditor.execCommand("selectAll");
+          setStatus("Clipboard access was blocked. Output selected; copy it manually.");
+        }
+      });
+
+      deriveKey();
+      inputEditor.setValue(JSON.stringify({ hello: "world" }, null, 2));
+    })();
+  </script>
+</body>
+</html>
